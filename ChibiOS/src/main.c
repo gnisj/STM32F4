@@ -47,11 +47,11 @@ static void read_acc(BaseSequentialStream *chp, int argc, char *argv[]) {
 
   char data1[] = "Hello, STFU. \n \r";
   sdWrite(&SDU1, (uint8_t *) data1, strlen(data1));
-  chprintf(chp, "Test! Boo!\r\n");
+  //chprintf(chp, "Test! Boo!\r\n");
   //while (1) {
 
     
-    //chprintf(chp, "%x \r\n", xAxis);
+  //chprintf(chp, "%x \r\n", xAxis);
     //sdWrite(&SDU1, (uint8_t *) xAxisH, strlen(xAxisH)); 
     //sdWrite(&SDU1, (uint8_t *) data1, strlen(data1));
     chThdSleepMilliseconds(30);   

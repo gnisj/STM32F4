@@ -45,6 +45,9 @@ void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
 
+// Added to avoid compiler warning... /MO
+void timing_handler();
+
 #ifdef __cplusplus
 }
 #endif
