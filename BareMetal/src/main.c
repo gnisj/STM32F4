@@ -4,7 +4,7 @@
  * Important information is important and will be written here.
  * More important information.
  * 
- * @author Martin Oredsson
+ * @author John Doe
  * @bug No known bugs.
  */
 
@@ -17,6 +17,9 @@
 #include "main.h"
 #include "SPI.h"
 #include "UART.h"
+#include "stm32f4xx_adc.h"
+#include "stm32f4xx_gpio.h"
+#include "stm32f4xx_rcc.h"
 
 #define MAX_STRLEN 12
 
@@ -24,6 +27,9 @@
 volatile uint32_t time_var1, time_var2;
 volatile char received_string[MAX_STRLEN+1];
 uint8_t i = 0;
+
+int ConvertedValue = 0;
+float value_in_volts = 0.0;
 
 uint8_t txbuf[4];
 uint8_t rxbuf[4];
@@ -47,11 +53,10 @@ int main(void)
   Init();
   UsartInit(9600);
   
-  // Chip select
   csInit();
-
   spiInit(SPI1);
-  
+  ADC_Config();
+  char bufferadc[100];
   /*
   for (m=0; m<8; m++) {
     for (n=0; n<4; n++) {
@@ -68,7 +73,7 @@ int main(void)
   */
   
   while(1){
-    //Dummy(); // Uncomment to run USART to terminal testing, BOO!
+    Dummy(); // Uncomment to run USART to terminal testing, BOO!
     spiLoopbackTest();
     
   /*if(GPIOA->IDR & 0x0001) {
@@ -99,7 +104,18 @@ int main(void)
     
     //USART_putn(USART1, 2);
    
-    Delay(50000L);
+    ConvertedValue = adc_convert();
+    //value_in_volts = float(ConvertedValue);
+    Delay(10000000L);
+    //    UsartPuts(USART1, (char)ConvertedValue);
+    //sprintf(bufferadc, "Voltage on PC0: %dV", (5 * ConvertedValue / 4096));
+    ftoa(bufferadc, "Voltage on PC0: %dV", (5 * ConvertedValue / 4096));
+    //sprintf(bufferadc, "Voltage on PC0: %fV", value_in_volts);
+    //UsartPuts(USART1, ("%d", ConvertedValue));
+    //UsartPuts(USART1, "Voltage on PC0:\n\r");
+    UsartPuts(USART1, bufferadc);
+    UsartPuts(USART1, "\n\r");
+
   }
   return 0;
 }
@@ -148,7 +164,7 @@ void Dummy()
         /* Turn on green LED1, turn off blue LED4 */
         GPIOD->BSRRL = 0x1000;
         GPIOD->BSRRH = 0x8000;
-        UsartPuts(USART1, "BOO!\r\n");
+        //UsartPuts(USART1, "I'm back motherfuckers!\r\n");
         break;
 
       case 1:
@@ -240,6 +256,13 @@ void Init()
 
 /********** SPI FUNCTIONS **********/
 
+uint8_t eepromReadStatus()
+{
+  //uint8_t cmd[] = {cmdRDSR, 0xff};
+  uint8_t res[2];
+  //https://github.com/nalepae/stm32_tutorial/tree/master/src
+}
+
 /** 
  * @brief  Initializes SPIx on PORTA. Current version only works for SPI1.
  *         To be expanded for SPI2 and SPI 3 (TBD).
@@ -294,6 +317,7 @@ void spiInit(SPI_TypeDef *SPIx)
   SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
   SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
   SPI_InitStructure.SPI_BaudRatePrescaler = speeds[SPI_SLOW];
+  SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
   SPI_InitStructure.SPI_CRCPolynomial = 7;
   SPI_Init(SPIx, &SPI_InitStructure);
 
@@ -551,3 +575,50 @@ void _init()
 {}
 
 /********** END MISC FUNCTIONS **********/
+                                          
+
+void ADC_Config(void)
+{
+  // Structure for ADC configuration
+  ADC_InitTypeDef ADC_init_structure;
+  // Structure for analog input pin
+  GPIO_InitTypeDef GPIO_initStructure;
+  
+  // Enable clock for ADC1 which is connected
+  // to the APB2 peripheral bus
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+  RCC_AHB1PeriphClockCmd(RCC_AHB1ENR_GPIOCEN, ENABLE);
+  
+  // Analog pin config
+  // Channel 10 is connected to PC0
+  GPIO_initStructure.GPIO_Pin = GPIO_Pin_0;
+  // PC0 to analog mode
+  GPIO_initStructure.GPIO_Mode = GPIO_Mode_AN;
+  // No pullupdown
+  GPIO_initStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  // Apply to selected GPIO or something like that
+  GPIO_Init(GPIOC, &GPIO_initStructure);
+
+  ADC_DeInit();
+  ADC_init_structure.ADC_DataAlign = ADC_DataAlign_Right;
+  ADC_init_structure.ADC_Resolution = ADC_Resolution_12b;
+  ADC_init_structure.ADC_ContinuousConvMode = ENABLE;
+  ADC_init_structure.ADC_ExternalTrigConv = ADC_ExternalTrigConv_T1_CC1;
+  ADC_init_structure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+  ADC_init_structure.ADC_NbrOfConversion = 1;
+  ADC_init_structure.ADC_ScanConvMode = DISABLE;
+  ADC_Init(ADC1, &ADC_init_structure);
+  
+  ADC_Cmd(ADC1, ENABLE);
+  
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_10, 1, ADC_SampleTime_144Cycles);
+}
+
+int adc_convert()
+{
+  ADC_SoftwareStartConv(ADC1);
+  while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
+  return ADC_GetConversionValue(ADC1);
+}
+
+
