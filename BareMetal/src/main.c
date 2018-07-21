@@ -23,8 +23,6 @@
 
 #define MAX_STRLEN 12
 
-
-
 // Private variables
 volatile uint32_t time_var1, time_var2;
 volatile char received_string[MAX_STRLEN+1];
@@ -60,31 +58,31 @@ int main(void)
   ADC_Config();
   char bufferadc[100];
   /*
-  for (m=0; m<8; m++) {
+    for (m=0; m<8; m++) {
     for (n=0; n<4; n++) {
-      txbuf[n] = m*4 + n;
-      GPIO_WriteBit(GPIOA, GPIO_Pin_3, 0);
-      spiReadWrite(SPI1, rxbuf, txbuf, 4, SPI_SLOW);
-      GPIO_WriteBit(GPIOA, GPIO_Pin_3, 1);
-      for (m=0; m<4; m++) {
-        if (rxbuf[m] != txbuf[m]){}
-          //assert_failed(__FILE__, __LINE__);
-      }
+    txbuf[n] = m*4 + n;
+    GPIO_WriteBit(GPIOA, GPIO_Pin_3, 0);
+    spiReadWrite(SPI1, rxbuf, txbuf, 4, SPI_SLOW);
+    GPIO_WriteBit(GPIOA, GPIO_Pin_3, 1);
+    for (m=0; m<4; m++) {
+    if (rxbuf[m] != txbuf[m]){}
+    //assert_failed(__FILE__, __LINE__);
     }
-  }
+    }
+    }
   */
   
   while(1){
     Dummy(); // Uncomment to run USART to terminal testing, BOO!
-    spiLoopbackTest();
+    //spiLoopbackTest();
     
-  /*if(GPIOA->IDR & 0x0001) {
+    /*if(GPIOA->IDR & 0x0001) {
       GPIO_ToggleBits(GPIOD, GPIO_Pin_12);
-    }
-    GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
-    GPIO_ToggleBits(GPIOD, GPIO_Pin_14);
-    GPIO_ToggleBits(GPIOD, GPIO_Pin_15);
-      */
+      }
+      GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
+      GPIO_ToggleBits(GPIOD, GPIO_Pin_14);
+      GPIO_ToggleBits(GPIOD, GPIO_Pin_15);
+    */
     //USART_putchar(USART1,SPI1_send(0x56));    
     //USART_putn(USART1, 10);
     //USART_puts(USART1, "\r\n");
@@ -103,21 +101,20 @@ int main(void)
     //GPIOA->BSRRL |= GPIO_Pin_7;
     //GPIO_ToggleBits(GPIOA, GPIO_Pin_4);
     //USART_puts(USART1, received_val);
-    
-    //USART_putn(USART1, 2);
-   
-    ConvertedValue = adc_convert();
-    //value_in_volts = float(ConvertedValue);
-    Delay(10000000L);
-    //    UsartPuts(USART1, (char)ConvertedValue);
-    //sprintf(bufferadc, "Voltage on PC0: %dV", (5 * ConvertedValue / 4096));
-    ftoa(bufferadc, "Voltage on PC0: %dV", (5 * ConvertedValue / 4096));
-    //sprintf(bufferadc, "Voltage on PC0: %fV", value_in_volts);
-    //UsartPuts(USART1, ("%d", ConvertedValue));
-    //UsartPuts(USART1, "Voltage on PC0:\n\r");
-    UsartPuts(USART1, bufferadc);
-    UsartPuts(USART1, "\n\r");
 
+
+    //UsartPuts(USART1, ("%d", ConvertedValue));
+    //UsartPuts(USART1, "Volwtage on PC0:\n\r");
+    
+    ConvertedValue = adc_convert();
+    value_in_volts = 5.0 / 4096.0 * ConvertedValue;
+    Delay(10000000L);
+    char mybuf[8];
+    int a = 4;
+    sprintf(bufferadc, "Voltage: %fV\n\r", value_in_volts);//ConvertedValue);
+    //    ftoa(buffferadc, "Voltdage on PC0: %dV", (5 * ConvertedValue / 4096));
+    UsartPuts(USART1, bufferadc);
+    //UsartPuts(USART1, "\n\r");
   }
   return 0;
 }
@@ -135,19 +132,19 @@ void spiLoopbackTest()
   
     /*for(j = 0; j < 4; j++)
       if(rxbuf[j] != txbuf[j])
-        assert_failed(__FILE__ , __LINE__);
+      assert_failed(__FILE__ , __LINE__);
     */
   }
   /*for(i = 0; i < 8; i++) {
     for(j = 0; j < 4; j++)
-      txbuf16[j] = i*4 + j + (i << 8);
+    txbuf16[j] = i*4 + j + (i << 8);
     GPIO_WriteBit(GPIOC, GPIO_Pin_3 , 0);
     spiReadWrite16(SPI1, rxbuf16, txbuf16, 4, SPI_SLOW);
     GPIO_WriteBit(GPIOC, GPIO_Pin_3 , 1);
     for(j = 0; j < 4; j++)
-      if(rxbuf16[j] != txbuf16[j])
-        assert_failed(__FILE__ , __LINE__);
-        }*/
+    if(rxbuf16[j] != txbuf16[j])
+    assert_failed(__FILE__ , __LINE__);
+    }*/
 }
 
 
@@ -166,7 +163,7 @@ void Dummy()
         /* Turn on green LED1, turn off blue LED4 */
         GPIOD->BSRRL = 0x1000;
         GPIOD->BSRRH = 0x8000;
-        //UsartPuts(USART1, "I'm back motherfuckers!\r\n");
+        UsartPuts(USART1, "I'm back motherfuckers!\r\n");
         break;
 
       case 1:
@@ -230,7 +227,7 @@ void LedInit()
 void Init()
 {
 
- // Initialize struct 
+  // Initialize struct 
   GPIO_InitTypeDef  GPIO_InitStructure;
 
   /*** PUSH-BUTTON ***/
@@ -328,17 +325,19 @@ void spiInit(SPI_TypeDef *SPIx)
 
 /** 
  * @brief SPI test function.
- *
+ * Broke after spi1Send stopped compiling
  */ 
-void spiTest()
-{
+/*void spiTest()
+  {
   uint8_t received_val = 0;
   GPIOE->BSRRH |= GPIO_Pin_7; // set PE7 (CS) low
   spi1Send(0xAA);  // transmit data
   received_val = spi1Send(0x00); // transmit dummy byte and receive data
   GPIOE->BSRRL |= GPIO_Pin_7; // set PE7 (CS) high
   
-}
+  }
+*/ 
+
 
 /** 
  * @brief Chip select
@@ -364,15 +363,15 @@ void csInit(void)
  *
  *  @param data Character to be sent.
  *  @return Returns the DR register contents of SPI1
- */
-uint8_t spi1Send(uint8_t data)
-{
-  SPI1->DR = data;
-  while( !(SPI1->SR & SPI_I2S_FLAG_TXE) );
-  while( !(SPI1->SR & SPI_I2S_FLAG_RXNE) );
-  while( SPI1->SR & SPI_I2S_FLAG_BSY);
-  return SPI1->DR;
-}
+ *
+ uint8_t spi1Send(uint8_t data)
+ {
+ SPI1->DR = data;
+ while( !(SPI1->SR & SPI_I2S_FLAG_TXE) );
+ while( !(SPI1->SR & SPI_I2S_FLAG_RXNE) );
+ while( SPI1->SR & SPI_I2S_FLAG_BSY);
+ return SPI1->DR;
+ }*/
 
 // See https://github.com/geoffreymbrown/STM32-Template
 
