@@ -23,7 +23,7 @@
 
 #define MAX_STRLEN 12
 
-// bla
+
 
 // Private variables
 volatile uint32_t time_var1, time_var2;
