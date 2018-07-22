@@ -16,16 +16,19 @@
 #include "utils.h"
 #include "main.h"
 #include "SPI.h"
-#include "UART.h"
+//#include "UART.h"
 #include "stm32f4xx_adc.h"
 #include "stm32f4xx_gpio.h"
 #include "stm32f4xx_rcc.h"
 
-#define MAX_STRLEN 12
+#include "adc.h"
+#include "uart.h"
+
+
 
 // Private variables
 volatile uint32_t time_var1, time_var2;
-volatile char received_string[MAX_STRLEN+1];
+
 uint8_t i = 0;
 
 int ConvertedValue = 0;
@@ -55,56 +58,12 @@ int main(void)
   
   csInit();
   spiInit(SPI1);
-  ADC_Config();
+  adc_config();
   char bufferadc[100];
-  /*
-    for (m=0; m<8; m++) {
-    for (n=0; n<4; n++) {
-    txbuf[n] = m*4 + n;
-    GPIO_WriteBit(GPIOA, GPIO_Pin_3, 0);
-    spiReadWrite(SPI1, rxbuf, txbuf, 4, SPI_SLOW);
-    GPIO_WriteBit(GPIOA, GPIO_Pin_3, 1);
-    for (m=0; m<4; m++) {
-    if (rxbuf[m] != txbuf[m]){}
-    //assert_failed(__FILE__, __LINE__);
-    }
-    }
-    }
-  */
   
   while(1){
     Dummy(); // Uncomment to run USART to terminal testing, BOO!
     //spiLoopbackTest();
-    
-    /*if(GPIOA->IDR & 0x0001) {
-      GPIO_ToggleBits(GPIOD, GPIO_Pin_12);
-      }
-      GPIO_ToggleBits(GPIOD, GPIO_Pin_13);
-      GPIO_ToggleBits(GPIOD, GPIO_Pin_14);
-      GPIO_ToggleBits(GPIOD, GPIO_Pin_15);
-    */
-    //USART_putchar(USART1,SPI1_send(0x56));    
-    //USART_putn(USART1, 10);
-    //USART_puts(USART1, "\r\n");
-    
-    // USART_puts(USART1, "BOO!\r\n");
-    //Delay(5000000L);
-    //SPI1_send(0x55);
-    //spiReadWrite(SPI1, rxbuf, txbuf, 4, SPI_SLOW);
-    
-    //USART_puts(USART1, "Not BOO.\r\n");
-    
-    //GPIOA->BSRRH |= GPIO_Pin_4;
-    //GPIO_ToggleBits(GPIOA, GPIO_Pin_4);
-    //SPI1_send(0xAA);
-    //received_val = SPI1_send(0x55);
-    //GPIOA->BSRRL |= GPIO_Pin_7;
-    //GPIO_ToggleBits(GPIOA, GPIO_Pin_4);
-    //USART_puts(USART1, received_val);
-
-
-    //UsartPuts(USART1, ("%d", ConvertedValue));
-    //UsartPuts(USART1, "Volwtage on PC0:\n\r");
     
     ConvertedValue = adc_convert();
     value_in_volts = 5.0 / 4096.0 * ConvertedValue;
@@ -112,9 +71,7 @@ int main(void)
     char mybuf[8];
     int a = 4;
     sprintf(bufferadc, "Voltage: %fV\n\r", value_in_volts);//ConvertedValue);
-    //    ftoa(buffferadc, "Voltdage on PC0: %dV", (5 * ConvertedValue / 4096));
     UsartPuts(USART1, bufferadc);
-    //UsartPuts(USART1, "\n\r");
   }
   return 0;
 }
@@ -130,23 +87,8 @@ void spiLoopbackTest()
     spiReadWrite(SPI1, rxbuf, txbuf, 4, SPI_SLOW);
     GPIO_WriteBit(GPIOC, GPIO_Pin_3 , 1);
   
-    /*for(j = 0; j < 4; j++)
-      if(rxbuf[j] != txbuf[j])
-      assert_failed(__FILE__ , __LINE__);
-    */
   }
-  /*for(i = 0; i < 8; i++) {
-    for(j = 0; j < 4; j++)
-    txbuf16[j] = i*4 + j + (i << 8);
-    GPIO_WriteBit(GPIOC, GPIO_Pin_3 , 0);
-    spiReadWrite16(SPI1, rxbuf16, txbuf16, 4, SPI_SLOW);
-    GPIO_WriteBit(GPIOC, GPIO_Pin_3 , 1);
-    for(j = 0; j < 4; j++)
-    if(rxbuf16[j] != txbuf16[j])
-    assert_failed(__FILE__ , __LINE__);
-    }*/
 }
-
 
 /** 
  * @brief Dummy test function.
@@ -405,128 +347,6 @@ int spiReadWrite(SPI_TypeDef* SPIx,
 
 /********** USART FUNCTIONS **********/
 
-/** 
- *  @brief  USART1 peripheral initizialition.
- *          Options for non USART1 is TBD.
- *  @param  baudrate Specifies the baud.
- *          Valid baud are: TDB.
- *  @retval None.
- */
-void UsartInit(uint32_t baud)
-{
-  GPIO_InitTypeDef  GPIO_InitStructure;
-  USART_InitTypeDef USART_InitStructure;
-  NVIC_InitTypeDef NVIC_InitStructure;
- 
-  // Enable APB2 peripheral clock for USART1  
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, ENABLE);  
-  // Enable AHB1 peripheral clock for USART1 pins (PB6 and PB7)
-  RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOB, ENABLE);  
-  // Set up pins PB6 and PB7
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;  
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_UP;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
-  
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_USART1);
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_USART1);
-  
-  // Set up USART parameters
-  USART_InitStructure.USART_BaudRate = baud;
-  USART_InitStructure.USART_WordLength = USART_WordLength_8b;
-  USART_InitStructure.USART_StopBits = USART_StopBits_1;
-  USART_InitStructure.USART_Parity = USART_Parity_No;
-  USART_InitStructure.USART_HardwareFlowControl = 
-    USART_HardwareFlowControl_None;
-  USART_InitStructure.USART_Mode = USART_Mode_Tx | USART_Mode_Rx;
-  USART_Init(USART1, &USART_InitStructure);
-  
-  // Setup USART RX interrupts
-  USART_ITConfig(USART1, USART_IT_RXNE, ENABLE);
-  NVIC_InitStructure.NVIC_IRQChannel = USART1_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-
-  // Enable complete USART1 peripheral
-  USART_Cmd(USART1, ENABLE);
-}
-
-/** @brief USARTx string transmit function.
- *  @param USARTx USART1 to USART6.
- *  @param *s Pointer to first char in string.
- *  @retval None.
- */
-void UsartPuts(USART_TypeDef* USARTx, volatile char *s)
-{
-  while(*s){
-    /* Check TX Buffer Empty flag and wait until flag is set.
-     * TXE = 0 indicates that internal TX buffer is not ready to 
-     * be loaded with next data. Can also use 
-     * USART_SendData(USARTx, *s) here.
-     */
-    while( (USARTx->SR & USART_SR_TXE) == 0 );//0x00000040));
-    USARTx->DR = (*s & (uint16_t)0x01FF);
-    *s++;
-  }
-}
-
-/** 
- *  @brief USARTx char transmit function.
- *  @param USARTx USART1 to USART6.
- *  @param Data Character to be transmitted.
- *  @retval None.
- */
-void UsartPutchar(USART_TypeDef* USARTx, uint16_t Data)
-{
-  while(!(USARTx -> SR & USART_SR_TXE));
-  USARTx->DR = (Data & (uint16_t)0x01FF);
-}
-
-/** 
- *  @brief USARTx number transmit function.
- *         NB! DOES NOT WORK PROPERLY. TBF.
- *  @param USARTx USART1 to USART6.
- *  @param num Number to be transmitted.
- *  @retval None.
- */
-void UsartPutn(USART_TypeDef* USARTx, uint32_t num)
-{
-  char value[10];
-  int i = 0;
-
-  do {
-    value[i++] = (char)(num % 10) + '0';
-    num /= 10;
-  } while(num);
-
-  while(i) {
-    UsartPuts(USART1, &value[--i]);
-  }
-}
-
-/*
- * USART interrupt handler 
- */
-void UsartIRQHandler(void)
-{
-  if(USART_GetITStatus(USART1, USART_IT_RXNE)) {
-    static uint8_t cnt = 0;
-    char t = USART1->DR;
-    
-    if((t != '\n') && (cnt < MAX_STRLEN)) {
-      received_string[cnt] = t;
-      cnt++;
-    } else {
-      cnt = 0;
-      UsartPuts(USART1, received_string);
-    }
-  }
-}
-
 /********** END USART FUNCTIONS **********/
 
 /********** MISC FUNCTIONS **********/
@@ -577,7 +397,7 @@ void _init()
 
 /********** END MISC FUNCTIONS **********/
                                           
-
+/*
 void ADC_Config(void)
 {
   // Structure for ADC configuration
@@ -621,5 +441,4 @@ int adc_convert()
   while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC));
   return ADC_GetConversionValue(ADC1);
 }
-
-
+*/
